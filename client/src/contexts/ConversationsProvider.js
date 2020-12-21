@@ -8,7 +8,7 @@ export function useConversations() {
   return useContext(ConversationsContext);
 }
 
-export function ConversationsProvider({ children }) {
+export function ConversationsProvider({ children, id }) {
   const [conversations, setConversations] = useLocalStorage(
     'conversations',
     []
@@ -21,6 +21,34 @@ export function ConversationsProvider({ children }) {
     setConversations((prevConversations) => {
       return [...prevConversations, { recipients, messages: [] }];
     });
+  }
+
+  function addMessageToConversation({ recipients, text, sender }) {
+    setConversations((prevConversations) => {
+      let madeChange = false;
+      const newMessage = { sender, text };
+      const newConversations = prevConversations.map((conversation) => {
+        if (arrayEquality(conversation.recipients, recipients)) {
+          madeChange = true;
+          return {
+            ...conversation,
+            messages: [...conversation.messages, newMessage],
+          };
+        }
+        return conversation;
+      });
+
+      if (madeChange) {
+        return newConversations;
+      } else {
+        return [...prevConversations, { recipients, messages: [newMessage] }];
+      }
+    });
+  }
+
+  function sendMessage(recipients, text) {
+    console.log(text);
+    addMessageToConversation({ recipients, text, sender: id });
   }
 
   const formattedConversations = conversations.map((conversation, index) => {
@@ -40,6 +68,7 @@ export function ConversationsProvider({ children }) {
     createConversation,
     selectConversationIndex: setSelectedConversationIndex,
     selectedConversation: formattedConversations[selectedConversationIndex],
+    sendMessage,
   };
 
   return (
@@ -47,4 +76,15 @@ export function ConversationsProvider({ children }) {
       {children}
     </ConversationsContext.Provider>
   );
+}
+
+function arrayEquality(a, b) {
+  if (a.length !== b.length) return false;
+
+  a.sort();
+  b.sort();
+
+  return a.every((element, index) => {
+    return element === b[index];
+  });
 }
